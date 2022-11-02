@@ -25,14 +25,15 @@ def read_file(pred_config):
 
 
 def load_pretrainModel(pred_config, args, intent_num_labels, slot_num_labels):
-    # get Model
-    config, _, model = MODEL_CLASSES[pred_config.model_type]
+
     # load model pretrain weight
     if pred_config.model_type.endswith('bert'):
+        config, _, model = MODEL_CLASSES[pred_config.model_type]
         config = config.from_pretrained(pred_config.model_dir)
         model = model.from_pretrained(pred_config.model_dir, config=config, args=args,
                                       intent_num_labels=intent_num_labels, slot_num_labels=slot_num_labels)
     else:
+        config, model = MODEL_CLASSES[pred_config.model_type]
         model = model.reload_model(pred_config.model_dir, args)
 
     return model
@@ -191,6 +192,8 @@ def get_s2s_predict(model, Dataset, pred_config, args, slot_vocab, device):
 
 
 def get_pretrain_predict(model, Dataset, pred_config, args, device):
+    slot_maskLabels = []
+
     # build iterator
     Batch_size = len(Dataset) if len(
         Dataset) < pred_config.bs else pred_config.bs
@@ -303,7 +306,7 @@ def main(pred_config):
     intent_vocab = get_intent_labels(train_args)
     slot_vocab = get_slot_labels(train_args)
 
-    # load preain Model
+    # load pretrain Model
     model = load_pretrainModel(
         pred_config, train_args, len(intent_vocab), len(slot_vocab))
     model.to(device)

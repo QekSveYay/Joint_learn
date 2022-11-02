@@ -300,6 +300,9 @@ class RnnTrainer(BaseTrainer):
         self.config['input_dim'] = len(self.word_vocab)
         self.config['slot_label_nums'] = len(self.slot_vocab)
         self.config['intent_label_nums'] = len(self.intent_vocab)
+        self.config['embed_dim'] = args.s2s_embed_dim
+        self.config['hid_dim'] = args.s2s_hid_dim
+        self.config['n_layers'] = args.s2s_n_layers
         if pretrained_path is not None:
             self.model = self.model.reload_model(pretrained_path,args)
         else:

@@ -42,7 +42,7 @@ def main(args):
 if __name__ == '__main__':
     # set run script optinal arg
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', default='.\data', type=str,
+    parser.add_argument('--data_dir', default='./data', type=str,
                         help='Root dir path for save data.Default ./data')
     parser.add_argument('--model_dir', default=None, type=str, required=True,
                         help='Path to save training model.Required Argument.')
@@ -57,6 +57,11 @@ if __name__ == '__main__':
 
     parser.add_argument('--model_type', default='joint_bert', type=str, required=True,
                         choices=MODEL_CLASSES.keys(), help='Model type selected in the list:'+','.join(MODEL_CLASSES.keys()))
+    parser.add_argument('--s2s_embed_dim', default=128, type=int, help='AttnS2S Model embedding dimension. Default is 128')
+    parser.add_argument('--s2s_hid_dim', default=128, type=int,
+                        help='AttnS2S Model hidden layers dimension. Default is 128')
+    parser.add_argument('--s2s_n_layers', default=1, type=int,
+                        help='AttnS2S Model number of hidden layers. Default is 1')
 
     parser.add_argument('--random_seed', type=int,
                         default=1234, help='set random seed')
