@@ -11,41 +11,56 @@ from .module import slot_classifier, intent_classifier
 class BiEncoder(nn.Module):
     def __init__(self, configs, args):
         super(BiEncoder, self).__init__()
-
+        self.model_type = args.S2S_model_type
         self.input_dim = configs.get('input_dim')
         self.embed_dim = configs.get('embed_dim')
         self.hid_dim = configs.get('hid_dim')
         self.n_layers = configs.get('n_layers')
 
         self.embed = nn.Embedding(self.input_dim, self.embed_dim)
-        self.rnn_layer = nn.LSTM(
-            self.embed_dim, self.hid_dim, self.n_layers, bidirectional=True)
+        if self.model_type == 'GRU':
+            self.rnn_layer = nn.GRU(
+                self.embed_dim, self.hid_dim, self.n_layers, bidirectional=True)
+        else:
+            self.rnn_layer = nn.LSTM(
+                self.embed_dim, self.hid_dim, self.n_layers, bidirectional=True)
 
     def forward(self, input_tensors):
         # embed_tensors=[seqlen,bs,embed_dim]
         embed_tensors = self.embed(input_tensors)
-        encoder_output, (h_output, c_output) = self.rnn_layer(embed_tensors)
+        if self.model_type == 'GRU':
+            encoder_output, (h_output) = self.rnn_layer(embed_tensors)
+        else:
+            encoder_output, (h_output, c_output) = self.rnn_layer(embed_tensors)
 
         # return encoded,final backward rnn hidden
         # encoder=[seqlen,bs,hid_dim]
         # h_output,c_output=[1,bs,hid_dim]
-        return encoder_output, (h_output, c_output)
+        if self.model_type == 'GRU':
+            return encoder_output, (h_output)
+        else:
+            return encoder_output, (h_output, c_output)
 
 
 class Decoder(nn.Module):
     def __init__(self, configs, args):
         super(Decoder, self).__init__()
+        self.model_type = args.S2S_model_type
         self.output_dim = configs.get('slot_label_nums')
         self.embed_dim = configs.get('embed_dim')
         self.hid_dim = configs.get('hid_dim')
 
         self.embed = nn.Embedding(self.output_dim, self.embed_dim)
-        self.decode_layer = nn.LSTM(
-            self.embed_dim+self.hid_dim*4, self.hid_dim, 1)
+        if self.model_type == 'GRU':
+            self.decode_layer = nn.GRU(
+                self.embed_dim + self.hid_dim * 4, self.hid_dim, 1)
+        else:
+            self.decode_layer = nn.LSTM(
+                self.embed_dim+self.hid_dim*4, self.hid_dim, 1)
         self.classifier = slot_classifier(
             self.hid_dim, self.output_dim, args.dropout)
 
-    def forward(self, input_tensors, aligned_input, encoder_outputs, attn_weight, h_state, c_state):
+    def forward(self, input_tensors, aligned_input, encoder_outputs, attn_weight, h_state, c_state=None):
         # get t-1 embed_vector
         # embed_tensors=[1,bs,hid_dim]
         # aligned_tensors=[1,bs,hid_dim]
@@ -63,14 +78,20 @@ class Decoder(nn.Module):
         # outputs=[1,bs,hid_dim]
         inputs = torch.cat(
             (embed_tensors, aligned_input, context_tensors), dim=2)
-        outputs, (h_state, c_state) = self.decode_layer(
-            inputs, (h_state, c_state))
+        if self.model_type == 'GRU':
+            outputs, (h_state) = self.decode_layer(inputs, (h_state))
+        else:
+            outputs, (h_state, c_state) = self.decode_layer(
+                inputs, (h_state, c_state))
 
         # outputs=[bs,output_dim]
         outputs = self.classifier(outputs.squeeze(0))
 
         # return logitics & hiddens state
-        return outputs, h_state, c_state
+        if self.model_type == 'GRU':
+            return outputs, h_state
+        else:
+            return outputs, h_state, c_state
 
 
 class Attentioner(nn.Module):
@@ -98,6 +119,7 @@ class Attentioner(nn.Module):
 class Joint_AttnSeq2Seq(nn.Module):
     def __init__(self, configs, args):
         super(Joint_AttnSeq2Seq, self).__init__()
+        self.model_type = args.S2S_model_type
         self.encoder = BiEncoder(configs, args)
         self.decoder = Decoder(configs, args)
         self.attner = Attentioner(configs)
@@ -119,12 +141,18 @@ class Joint_AttnSeq2Seq(nn.Module):
         total_loss = 0
         # 1.encoder stage
         # encoder output=[seqlen,bs,hid_dim]
-        encoder_outputs, (h_state, c_state) = self.encoder(src_tensors)
+        if self.model_type == 'GRU':
+            encoder_outputs, (h_state) = self.encoder(src_tensors)
+        else:
+            encoder_outputs, (h_state, c_state) = self.encoder(src_tensors)
 
         # get backward rnn hidden_state
         # decoder_hidden=[Bs,hid_dim]
         # aligned_input=[seqLen-1,Bs,hid_dim]
-        decoder_hidden, decoder_cell = h_state[-1, :, :], c_state[-1, :, :]
+        if self.model_type == 'GRU':
+            decoder_hidden = h_state[-1, :, :]
+        else:
+            decoder_hidden, decoder_cell = h_state[-1, :, :], c_state[-1, :, :]
 
         # compute attention weight
         decoder_attnW = self.attner(decoder_hidden, encoder_outputs)
@@ -145,15 +173,20 @@ class Joint_AttnSeq2Seq(nn.Module):
         # decoder hidden/cell=[1,Bs,hid_dim]
         decoder_input = trg_inputs[0, :]
         decoder_hidden = decoder_hidden.unsqueeze(0)
-        decoder_cell = decoder_cell.unsqueeze(0)
+        if self.model_type == 'LSTM':
+            decoder_cell = decoder_cell.unsqueeze(0)
         # slot_decode stage
         for idx in range(1, seqLen):
 
             # aligned inputs=[Bs,encoder_hid_dim]
             # t+1 deocder_input=[Bs,slot_labels_num]
             aligned = encoder_outputs[idx, :, :]
-            decoder_input, decoder_hidden, decoder_cell = self.decoder(decoder_input, aligned, encoder_outputs,
-                                                                       decoder_attnW, decoder_hidden, decoder_cell)
+            if self.model_type == 'GRU':
+                decoder_input, decoder_hidden = self.decoder(decoder_input, aligned, encoder_outputs,
+                                                                       decoder_attnW, decoder_hidden)
+            else:
+                decoder_input, decoder_hidden, decoder_cell = self.decoder(decoder_input, aligned, encoder_outputs,
+                                                                           decoder_attnW, decoder_hidden, decoder_cell)
             # save decoder predict
             slot_preds[idx] = decoder_input
 
@@ -180,12 +213,18 @@ class Joint_AttnSeq2Seq(nn.Module):
         slot_preds = []
         # 1.encoder stage
         # encoder output=[seqlen,bs,hid_dim]
-        encoder_outputs, (h_state, c_state) = self.encoder(src_tensors)
+        if self.model_type == 'GRU':
+            encoder_outputs, (h_state) = self.encoder(src_tensors)
+        else:
+            encoder_outputs, (h_state, c_state) = self.encoder(src_tensors)
         aligned_inputs = encoder_outputs[1:, :, :]
         # get backward rnn hidden_state
         # decoder_hidden=[Bs,hid_dim]
         # aligned_output=[seqLen,Bs,hid_dim]
-        decoder_hidden, decoder_cell = h_state[-1, :, :], c_state[-1, :, :]
+        if self.model_type == 'GRU':
+            decoder_hidden = h_state[-1, :, :]
+        else:
+            decoder_hidden, decoder_cell = h_state[-1, :, :], c_state[-1, :, :]
 
         # compute attention weight
         decoder_attnW = self.attner(decoder_hidden, encoder_outputs)
@@ -198,7 +237,8 @@ class Joint_AttnSeq2Seq(nn.Module):
         decoder_input = torch.tensor([trg_initTokenId], device=self.device)
         align_maxLen = origin_len
         decoder_hidden = decoder_hidden.unsqueeze(0)
-        decoder_cell = decoder_cell.unsqueeze(0)
+        if self.model_type == 'LSTM':
+            decoder_cell = decoder_cell.unsqueeze(0)
 
         for idx in range(align_maxLen):
             # aligned=[Bs,]
@@ -207,8 +247,12 @@ class Joint_AttnSeq2Seq(nn.Module):
             # decoder_input=[Bs,slot_dim]
             # deocder_hidden=[num_layer*direction,Bs,hid_dim]
             # decoder_cell=[num_layer*direction,Bs,hid_dim]
-            decoder_input, decoder_hidden, decoder_cell = self.decoder(decoder_input, aligned, encoder_outputs,
-                                                                       decoder_attnW, decoder_hidden, decoder_cell)
+            if self.model_type == 'GRU':
+                decoder_input, decoder_hidden = self.decoder(decoder_input, aligned, encoder_outputs,
+                                                                       decoder_attnW, decoder_hidden)
+            else:
+                decoder_input, decoder_hidden, decoder_cell = self.decoder(decoder_input, aligned, encoder_outputs,
+                                                                           decoder_attnW, decoder_hidden, decoder_cell)
             # compute attention weights
             decoder_attnW = self.attner(
                 decoder_hidden[-1, :, :], encoder_outputs)

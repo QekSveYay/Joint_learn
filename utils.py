@@ -17,6 +17,10 @@ MODEL_CLASSES = {
     'joint_bert': (BertConfig, BertTokenizer, modeling_JointBert.JointBert),
     'joint_AttnS2S': (modeling_JointRnn.RnnConfig, modeling_JointRnn.Joint_AttnSeq2Seq),
 }
+S2S_MODEL_CLASSES = {
+    'LSTM': 'LSTM RNN',
+    'GRU': 'GRU RNN'
+}
 MODEL_PATH = {
     'joint_bert': 'bert-base-uncased',
     'joint_AttnS2S': './atis_model/joint_attnS2S'

@@ -3,7 +3,7 @@ import torch
 
 from data_loader import load_and_cacheExampels
 from trainer import PreTrainedTrainer, RnnTrainer
-from utils import set_randomSeed, init_logger, load_tokenizer, MODEL_PATH, MODEL_CLASSES, get_word_vocab
+from utils import set_randomSeed, init_logger, load_tokenizer, MODEL_PATH, MODEL_CLASSES, S2S_MODEL_CLASSES, get_word_vocab
 
 
 def main(args):
@@ -57,6 +57,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--model_type', default='joint_bert', type=str, required=True,
                         choices=MODEL_CLASSES.keys(), help='Model type selected in the list:'+','.join(MODEL_CLASSES.keys()))
+    parser.add_argument('--S2S_model_type', default='LSTM', type=str, required=True,
+                        choices=S2S_MODEL_CLASSES.keys(),
+                        help='S2S model type selected in the list:' + ','.join(S2S_MODEL_CLASSES.keys()))
     parser.add_argument('--s2s_embed_dim', default=128, type=int, help='AttnS2S Model embedding dimension. Default is 128')
     parser.add_argument('--s2s_hid_dim', default=128, type=int,
                         help='AttnS2S Model hidden layers dimension. Default is 128')
