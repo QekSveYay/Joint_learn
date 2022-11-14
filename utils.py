@@ -16,6 +16,7 @@ def get_word_vocab(args):
 MODEL_CLASSES = {
     'joint_bert': (BertConfig, BertTokenizer, modeling_JointBert.JointBert),
     'joint_AttnS2S': (modeling_JointRnn.RnnConfig, modeling_JointRnn.Joint_AttnSeq2Seq),
+    'zh_joint_AttnS2S': (modeling_JointRnn.RnnConfig, modeling_JointRnn.Joint_AttnSeq2Seq),
 }
 S2S_MODEL_CLASSES = {
     'LSTM': 'LSTM RNN',
@@ -23,7 +24,8 @@ S2S_MODEL_CLASSES = {
 }
 MODEL_PATH = {
     'joint_bert': 'bert-base-uncased',
-    'joint_AttnS2S': './atis_model/joint_attnS2S'
+    'joint_AttnS2S': './atis_model/joint_attnS2S',
+    'zh_joint_AttnS2S': './smp_model/joint_attnS2S'
 }
 
 

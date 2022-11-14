@@ -46,7 +46,7 @@ if __name__ == '__main__':
                         help='Root dir path for save data.Default ./data')
     parser.add_argument('--model_dir', default=None, type=str, required=True,
                         help='Path to save training model.Required Argument.')
-    parser.add_argument('--task', default=None, required=True, choices=['snips', 'atis'],
+    parser.add_argument('--task', default=None, required=True, choices=['snips', 'atis', 'smp'],
                         type=str, help='Select train Model task:[atis,snips].Required Argument.')
     parser.add_argument('--intent_label_file', default='intent_label.txt',
                         type=str, help='File path for loading intent_label vocab')
