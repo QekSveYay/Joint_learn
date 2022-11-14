@@ -101,9 +101,7 @@ $ python predict.py --input_file {Input_file} --output_file {Output_file} --mode
 | **ATIS**  | BERT             | 97.4           | **98.07**   | 97.40            |
 |           | BERT + CRF       | 97.8           | 98.07       | 97.80            |
 |           | Seq2Seq+Attention| 98.2           | 96.8        | 98.20            |
-| **SMP**   | BERT             | 97.4           | **98.07**   | 97.40            |
-|           | BERT + CRF       | 97.8           | 98.07       | 97.80            |
-|           | Seq2Seq+Attention| 98.2           | 96.8        | 98.20            |
+| **SMP**   | Seq2Seq+Attention| 95.2           | 90.7        | 84.63            |
 
 
 ## Sentence predict Result  
