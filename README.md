@@ -44,6 +44,7 @@ Architecture is referenced to [monologg/JointBERT](https://github.com/monologg/J
 | ----- | ------ | --- | ---- | ------------- | ----------- |
 | ATIS  | 4,478  | 500 | 893  | 21            | 120         |
 | Snips | 13,084 | 700 | 700  | 7             | 72          |
+| SMP   | 4,623  | 199 | 199  | 60            | 311         |
 
 - The number of labels are based on the _train_ dataset.
 - Add `UNK` for labels (For intent and slot labels which are only shown in _dev_ and _test_ dataset)
@@ -68,6 +69,12 @@ $ python main.py --task atis \
 $ python main.py --task snips \
                  --model_type joint_bert \
                  --model_dir ./snips_model/joint_bert \
+                 --do_train --do_eval
+                 
+#For smp
+$ python main.py --task smp \
+                 --model_type zh_joint_AttnS2S \
+                 --model_dir ./smp_model/joint_AttnS2S \
                  --do_train --do_eval 
 ```  
   
@@ -92,6 +99,9 @@ $ python predict.py --input_file {Input_file} --output_file {Output_file} --mode
 |           | BERT + CRF       | 98.85          | 95.81       | 98.71            |
 |           | Seq2Seq+Attention| 98.14          | 95.07       | 97.57            |
 | **ATIS**  | BERT             | 97.4           | **98.07**   | 97.40            |
+|           | BERT + CRF       | 97.8           | 98.07       | 97.80            |
+|           | Seq2Seq+Attention| 98.2           | 96.8        | 98.20            |
+| **SMP**   | BERT             | 97.4           | **98.07**   | 97.40            |
 |           | BERT + CRF       | 97.8           | 98.07       | 97.80            |
 |           | Seq2Seq+Attention| 98.2           | 96.8        | 98.20            |
 
