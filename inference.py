@@ -12,7 +12,7 @@ from utils import load_tokenizer, get_intent_labels, get_slot_labels, MODEL_CLAS
 def one_shot_inference(lines, model_dir):
 
     # loading train Model args
-    args_path = os.path.join(pred_config.model_dir, 'train_args.bin')
+    args_path = os.path.join(model_dir, 'train_args.bin')
     train_args = torch.load(args_path)
 
     pred_config = train_args

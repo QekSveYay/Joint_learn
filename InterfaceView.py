@@ -6,7 +6,7 @@ class FrameApp(tk.Frame):
     def __init__(self, master):
         super(FrameApp, self).__init__(master)
 
-        self.model_dir = "./attnS2S_atis_model"
+        self.model_dir = "./attnS2S_LSTM_smp_model"
         self.inputSentence = []
         self.predict_intent = []
         self.slot_list = []
@@ -36,7 +36,7 @@ class FrameApp(tk.Frame):
         self.textOutputBlock3.grid(row=8, column=1)
 
     def getModelPath(self):
-        self.model_dir = "./attnS2S_atis_model"
+        self.model_dir = "./attnS2S_LSTM_smp_model"
 
     def clearText(self):
         self.textOutputBlock1.delete("1.0", "end")

@@ -3,6 +3,7 @@ import os
 import argparse
 import numpy as np
 import torch
+import pickle
 
 from tqdm import tqdm, trange
 import torch.nn.functional as F
@@ -166,6 +167,11 @@ def get_s2s_predict(model, Dataset, pred_config, args, slot_vocab, device):
             'origin_len': data[1].item(),
             'trg_initTokenId': slot_vocab.index('<sos>'),
             'trg_endTokenId': slot_vocab.index('<eos>'), }
+        
+        # save an example input directory
+        with open('save_input_directory.pkl','wb') as f:
+            pickle.dump(inputs, f)
+
         with torch.no_grad():
             intent_logitcis, slot_pred = model.get_predict(**inputs)
 
