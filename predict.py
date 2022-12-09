@@ -162,21 +162,25 @@ def get_s2s_predict(model, Dataset, pred_config, args, slot_vocab, device):
 
     model.eval()
     for data in data_loader:
+        src_tensors = data[0].permute(1, 0).to(device)
+        trg_tensors = torch.zeros([data[1].item(),1],dtype=int)
+        trg_tensors[-1] = slot_vocab.index('<eos>')
         inputs = {
-            'src_tensors': data[0].permute(1, 0).to(device),
-            'origin_len': data[1].item(),
-            'trg_initTokenId': slot_vocab.index('<sos>'),
-            'trg_endTokenId': slot_vocab.index('<eos>'), }
-        
+            'src_tensors': src_tensors,
+            'trg_tensors': trg_tensors,
+            'intent_labels': None, }
+
         # save an example input directory
-        with open('save_input_directory.pkl','wb') as f:
+        with open('save_s2s_input_directory.pkl','wb') as f:
             pickle.dump(inputs, f)
 
         with torch.no_grad():
-            intent_logitcis, slot_pred = model.get_predict(**inputs)
+            outputs = model(**inputs)
+            (intent_logitcis, slot_pred) = outputs[0]
+            slot_pred = slot_pred[1:-1]
 
-        assert len(slot_pred) == (
-            inputs['origin_len']), f'predictLen:{len(slot_pred)} vs origin len:{data[1].item()}'
+        #assert len(slot_pred) == (
+        #    inputs['origin_len']), f'predictLen:{len(slot_pred)} vs origin len:{data[1].item()}'
 
         # 1.get intent
         if intent_allPreds is not None:

@@ -130,14 +130,20 @@ class Joint_AttnSeq2Seq(nn.Module):
         self.device = torch.device('cuda:0') if torch.cuda.is_available() or not args.no_cuda \
             else torch.device('cpu')
 
-    def forward(self, src_tensors, trg_tensors, intent_labels, teach_ratio=0.5):
+    def forward(self, src_tensors, trg_tensors, intent_labels=None, teach_ratio=0.5):
         seqLen = trg_tensors.size()[0]
         Batch_size = trg_tensors.size()[1]
         slot_labels_num = self.decoder.output_dim
 
         # build slot_preds container
-        slot_preds = torch.zeros(
-            seqLen, Batch_size, slot_labels_num, device=self.device)
+        if intent_labels is not None:
+            # the model is in training mode when intent_labels are given
+            # for training, we must keep all possible slot predictions
+            slot_preds = torch.zeros(seqLen, Batch_size, slot_labels_num, device=self.device)
+        else:
+            # for inference, we keep only one slot prediction for each single word
+            slot_preds = torch.zeros(seqLen, Batch_size, dtype=int, device=self.device)
+
         total_loss = 0
         # 1.encoder stage
         # encoder output=[seqlen,bs,hid_dim]
@@ -161,8 +167,9 @@ class Joint_AttnSeq2Seq(nn.Module):
         # intent_logitics=[Bs,intent_labels_num]
         intent_logitics = self.intent_classifier(decoder_hidden, contexts=encoder_outputs.permute(1, 0, 2),
                                                  attn_weights=decoder_attnW)
-        intent_loss = self.criterion(intent_logitics, intent_labels)
-        total_loss += intent_loss
+        if intent_labels is not None:
+            intent_loss = self.criterion(intent_logitics, intent_labels)
+            total_loss += intent_loss
 
         # get remove <eos> input
         # trg_inputs=[seqlen-1,bs]
@@ -187,8 +194,9 @@ class Joint_AttnSeq2Seq(nn.Module):
             else:
                 decoder_input, decoder_hidden, decoder_cell = self.decoder(decoder_input, aligned, encoder_outputs,
                                                                            decoder_attnW, decoder_hidden, decoder_cell)
-            # save decoder predict
-            slot_preds[idx] = decoder_input
+            if intent_labels is not None:
+                # save decoder predict
+                slot_preds[idx] = decoder_input
 
             # compute attention weights
             decoder_attnW = self.attner(
@@ -196,18 +204,28 @@ class Joint_AttnSeq2Seq(nn.Module):
 
             # compute next decoder_token id
             # t+1 decoder_input=[Bs,]
-            use_teacher = True if random.random() < teach_ratio else False
-            top1_predict = torch.argmax(F.softmax(decoder_input, dim=1), dim=1)
+            decoder_input = torch.argmax(F.softmax(decoder_input, dim=1), dim=1)
 
-            decoder_input = trg_tensors[idx] if use_teacher else top1_predict
+            if intent_labels is not None:
+                if random.random() < teach_ratio:
+                    decoder_input = trg_tensors[idx]
+            else:
+                # save decoder predict
+                slot_preds[idx] = decoder_input
 
-        # compute slot_loss
-        slot_loss = self.criterion(slot_preds[1:, :, :].reshape(-1, slot_labels_num),
+        if intent_labels is not None:
+           # compute slot_loss
+           slot_loss = self.criterion(slot_preds[1:, :, :].reshape(-1, slot_labels_num),
                                    trg_tensors[1:, :].reshape(-1))
+           total_loss += (self.args.slot_loss_coef*slot_loss)
 
-        total_loss += (self.args.slot_loss_coef*slot_loss)
+        if intent_labels is not None:
+            outputs = ((intent_logitics, slot_preds[1:, :, :].permute(1, 0, 2)), )
+            outputs = (total_loss,) + outputs
+        else:
+            outputs = ((intent_logitics, slot_preds),)
 
-        return (total_loss, (intent_logitics, slot_preds[1:, :, :].permute(1, 0, 2)))
+        return outputs
 
     def get_predict(self, src_tensors, origin_len, trg_initTokenId, trg_endTokenId):
         slot_preds = []

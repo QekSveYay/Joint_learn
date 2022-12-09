@@ -40,7 +40,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    # set run script optinal arg
+    # set run script optional arg
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', default='./data', type=str,
                         help='Root dir path for save data.Default ./data')

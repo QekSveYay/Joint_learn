@@ -10,7 +10,7 @@ from seqeval.metrics import f1_score, recall_score, precision_score
 
 
 def get_word_vocab(args):
-    return [w.strip() for w in open(os.path.join(args.data_dir, args.task, args.word_vocab_file))]
+    return [w.strip() for w in open(os.path.join(args.data_dir, args.task, args.word_vocab_file), encoding="utf-8")]
 
 
 MODEL_CLASSES = {
